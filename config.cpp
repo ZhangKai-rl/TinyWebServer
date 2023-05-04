@@ -34,14 +34,15 @@ Config::Config(){
 
 void Config::parse_arg(int argc, char*argv[]){
     int opt;
-    const char *str = "p:l:m:o:s:t:c:a:";
-    while ((opt = getopt(argc, argv, str)) != -1)
+    const char *str = "p:l:m:o:s:t:c:a:"; //后带冒号表示该选项必须带参数
+    // getopt() 方法是用来分析命令行参数的，该方法由 Unix 标准库提供，包含在 <unistd.h> 头文件中。
+    while ((opt = getopt(argc, argv, str)) != -1)   // 返回值为int类型
     {
         switch (opt)
         {
         case 'p':
         {
-            PORT = atoi(optarg);
+            PORT = atoi(optarg); // optarg保存选项的参数
             break;
         }
         case 'l':

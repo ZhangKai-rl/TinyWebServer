@@ -5,17 +5,17 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-class sem
+class sem // 信号量用于同步
 {
 public:
     sem()
     {
-        if (sem_init(&m_sem, 0, 0) != 0)
+        if (sem_init(&m_sem, 0, 0) != 0)  // __pshared == 0 表示此信号量线程间共享，信号量初值为0
         {
             throw std::exception();
         }
     }
-    sem(int num)
+    sem(int num)  // 创建值为num的信号量
     {
         if (sem_init(&m_sem, 0, num) != 0)
         {
@@ -26,19 +26,19 @@ public:
     {
         sem_destroy(&m_sem);
     }
-    bool wait()
+    bool wait() // -1
     {
         return sem_wait(&m_sem) == 0;
     }
-    bool post()
+    bool post() // +1
     {
         return sem_post(&m_sem) == 0;
     }
 
 private:
-    sem_t m_sem;
+    sem_t m_sem; // 信号量
 };
-class locker
+class locker  // 互斥锁
 {
 public:
     locker()
@@ -68,7 +68,7 @@ public:
 private:
     pthread_mutex_t m_mutex;
 };
-class cond
+class cond  // 条件变量在使用的过程中必须搭配一个互斥锁来使用
 {
 public:
     cond()
@@ -87,7 +87,7 @@ public:
     {
         int ret = 0;
         //pthread_mutex_lock(&m_mutex);
-        ret = pthread_cond_wait(&m_cond, m_mutex);
+        ret = pthread_cond_wait(&m_cond, m_mutex); // 收到条件成立，解除阻塞重新加锁时返回0
         //pthread_mutex_unlock(&m_mutex);
         return ret == 0;
     }
@@ -99,6 +99,7 @@ public:
         //pthread_mutex_unlock(&m_mutex);
         return ret == 0;
     }
+    // 两个函数都是解除线程的阻塞状态。区别是signal至少解除一个，broadcast是接触全部的阻塞。
     bool signal()
     {
         return pthread_cond_signal(&m_cond) == 0;

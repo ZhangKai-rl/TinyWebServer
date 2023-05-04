@@ -14,7 +14,7 @@
 using namespace std;
 
 template <class T>
-class block_queue
+class block_queue  // 根据这个队列来判断同步还是异步写
 {
 public:
     block_queue(int max_size = 1000)

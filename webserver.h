@@ -47,37 +47,37 @@ public:
     //基础信息
     int m_port;//端口
     char *m_root;//根目录
-    int m_log_write;//日志类型
-    int m_close_log;//是否启动日志
+    int m_log_write;//日志类型  同步/异步
+    int m_close_log;//是否启动日志  是否开启日志？
     int m_actormodel;//Reactor/Proactor
     //网络信息
-    int m_pipefd[2];//相互连接的套接字
+    int m_pipefd[2];//相互连接的套接字  用这个来初始化工具类的套接字来传递信号 这是信号相关的套接字  关注下这对套接字的作用
     int m_epollfd;//epoll对象
-    http_conn *users;//单个http连接
+    http_conn *users;//单个http连接  http连接数组，使用connfd来索引
 
     //数据库相关
-    connection_pool *m_connPool;
+    connection_pool *m_connPool;  // 为什么这个没有delete？使用了RAII？
     string m_user;         //登陆数据库用户名
     string m_passWord;     //登陆数据库密码
     string m_databaseName; //使用数据库名
     int m_sql_num;//数据库连接池数量
 
     //线程池相关
-    threadpool<http_conn> *m_pool;
-    int m_thread_num;
+    threadpool<http_conn> *m_pool;  // 使用一个线程池来管理所有线程
+    int m_thread_num;//线程池数量
 
-    //epoll_event相关
+    //epoll_event相关；epoll_wait的传出参数，是内核中就绪的事件数组
     epoll_event events[MAX_EVENT_NUMBER];
 
     int m_listenfd;//监听套接字
-    int m_OPT_LINGER;//是否优雅下线
+    int m_OPT_LINGER;//是否优雅下线 ??
     int m_TRIGMode;//ET/LT
     int m_LISTENTrigmode;//ET/LT
     int m_CONNTrigmode;//ET/LT
 
     //定时器相关
-    client_data *users_timer;
+    client_data *users_timer;  // 使用connfd来索引
     //工具类
-    Utils utils;
+    Utils utils; 
 };
 #endif

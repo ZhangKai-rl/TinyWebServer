@@ -36,7 +36,7 @@ public:
     static const int READ_BUFFER_SIZE = 2048;
 	//写缓存大小
     static const int WRITE_BUFFER_SIZE = 1024;
-	//HTTP方法名
+	//HTTP请求方法名
     enum METHOD
     {
         GET = 0,
@@ -49,7 +49,7 @@ public:
         CONNECT,
         PATH
     };
-	//主状态机状态，检查请求报文中元素
+	//主状态机状态，表示此时在分析请求报文的哪个部分   // 请求行、请求头和请求报文
     enum CHECK_STATE
     {
         CHECK_STATE_REQUESTLINE = 0,
@@ -59,21 +59,21 @@ public:
 	//HTTP状态码
     enum HTTP_CODE
     {
-        NO_REQUEST,
-        GET_REQUEST,
-        BAD_REQUEST,
-        NO_RESOURCE,
-        FORBIDDEN_REQUEST,
-        FILE_REQUEST,
+        NO_REQUEST,     // 请求报文不完整
+        GET_REQUEST,    // 读取到完整报文
+        BAD_REQUEST,    // 请求有误， 如请求的是个目录、请求行格式不对等。
+        NO_RESOURCE,    // 请求资源不存在
+        FORBIDDEN_REQUEST,  // 禁止访问
+        FILE_REQUEST,   // 获取文件成功
         INTERNAL_ERROR,
         CLOSED_CONNECTION
     };
-	//从状态机的状态，文本解析是否成功
+	//从状态机的状态，文本解析是否成功   // 解析一行
     enum LINE_STATUS
     {
-        LINE_OK = 0,
+        LINE_OK = 0,  // 获取到完整请求行
         LINE_BAD,
-        LINE_OPEN
+        LINE_OPEN     // 请求行还不完整
     };
 
 public:
@@ -98,7 +98,7 @@ public:
 	//初始化数据库读取线程
     void initmysql_result(connection_pool *connPool);
 	
-    int timer_flag;//是否关闭连接
+    int timer_flag;//是否关闭连接  1代表此时需要删除定时器关闭连接
     int improv;//是否正在处理数据中
 
 
@@ -135,17 +135,17 @@ private:
 
 public:
     static int m_epollfd;
-    static int m_user_count;
-    MYSQL *mysql;
-    int m_state;  //IO 事件类别:读为0, 写为1
+    static int m_user_count;  // 静态变量用于记录所有的http连接数量
+    MYSQL *mysql;  // 用于从sql连接池中取出一个连接
+    int m_state;  //IO 事件类别:读为0, 写为1  这些事件需要加入线程池，用于表示这是什么事件
 
 private:
-    int m_sockfd;
-    sockaddr_in m_address;
+    int m_sockfd;  // 这个http连接用户的connfd
+    sockaddr_in m_address;  // ip地址
 	//存储读取的请求报文数据
     char m_read_buf[READ_BUFFER_SIZE];
 	//缓冲区中m_read_buf中数据的最后一个字节的下一个位置
-    int m_read_idx;
+    int m_read_idx;  // 已经使用revc读取的位置
 	//m_read_buf读取的位置m_checked_idx
     int m_checked_idx;
 	//m_read_buf中已经解析的字符个数
@@ -154,36 +154,37 @@ private:
     char m_write_buf[WRITE_BUFFER_SIZE];
 	//指示buffer中的长度
     int m_write_idx;
-	//主状态机的状态
+	//主状态机的状态  表示此时在分析请求报文的哪个部分   // 请求行、请求头和请求报文
     CHECK_STATE m_check_state;
 	//请求方法
-    METHOD m_method;
+    METHOD m_method;    //  请求行中的method
 	//以下为解析请求报文中对应的6个变量
     //存储读取文件的名称
-    char m_real_file[FILENAME_LEN];
-    char *m_url;
-    char *m_version;
-    char *m_host;
+    char m_real_file[FILENAME_LEN];   // 实际请求文件路径
+    char *m_url;           // 请求行中的url，即请求的url页面
+    char *m_version;        
+    char *m_host;           // 请求头中的host， 请求服务器域名
     int m_content_length;
-    bool m_linger;
+    bool m_linger;          // 请求头 keep-alive
 	//读取服务器上的文件地址
-    char *m_file_address;
-    struct stat m_file_stat;
-	//io向量机制iovec
-    struct iovec m_iv[2];
+    char *m_file_address;   // mmap内存映射到的地址。对于请求的文件不进行写缓冲区发送，而是直接内存映射。
+    struct stat m_file_stat;   // 客户端请求的服务端的文件的状态信息（是否存在，是否有权限等信息） // 传出参数，纪录客户端请求的服务端文件的状态信息
+	//io向量机制iovec  0是写缓冲区的地址长度，1是请求文件的地址长度
+    struct iovec m_iv[2];   // writev中使用了->聚集写。  这是两个分散的buffer
     int m_iv_count;
-    int cgi;        //是否启用的POST
-    char *m_string; //存储请求头数据
+    int cgi;        //是否启用的POST     ？？依旧不懂 cgi默认值是0，当请求方法是POST是cgi = 1；这样岂不是跟m_method一样的作用？？
+    char *m_string; //存储请求头数据   请求体中的数据
 	 //剩余发送字节数
     int bytes_to_send;
 	//已发送字节数
     int bytes_have_send;
-    char *doc_root;
+    char *doc_root;   // webserver服务器定义的根目录
 
     map<string, string> m_users;//用户名密码匹配表
-    int m_TRIGMode;//触发模式
+    int m_TRIGMode;//触发模式  ET / LT
     int m_close_log;//是否开启日志
 
+    // 存储mysql相关信息
     char sql_user[100];
     char sql_passwd[100];
     char sql_name[100];

@@ -8,7 +8,7 @@ sort_timer_lst::sort_timer_lst()
     head = NULL;
     tail = NULL;
 }
-//析构函数
+//析构函数 将所有定时器删除
 sort_timer_lst::~sort_timer_lst()
 {
     util_timer *tmp = head;
@@ -118,7 +118,7 @@ void sort_timer_lst::del_timer(util_timer *timer)
     delete timer;
 }
 
-//定时任务处理函数
+//定时任务处理函数  SIGALRM每次出发就执行一次tick函数
 void sort_timer_lst::tick()
 {
     if (!head)
@@ -201,13 +201,13 @@ int Utils::setnonblocking(int fd)
     return old_option;
 }
 
-//将内核事件表注册读事件，ET模式，是否选择开启EPOLLONESHOT
+//使用epoll_ctl在内核事件表注册读事件，ET模式，是否选择开启EPOLLONESHOT
 void Utils::addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
 {
     epoll_event event;
     event.data.fd = fd;
 
-    if (1 == TRIGMode)
+    if (1 == TRIGMode) // epoll默认是LT       1ET0LT
         event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
     else
         event.events = EPOLLIN | EPOLLRDHUP;
@@ -226,7 +226,7 @@ void Utils::sig_handler(int sig)
     //为保证函数的可重入性，保留原来的errno
     int save_errno = errno;
     int msg = sig;
-    send(u_pipefd[1], (char *)&msg, 1, 0);
+    send(u_pipefd[1], (char *)&msg, 1, 0);  // 信号处理函数将捕获到的信号发送到管道中
     errno = save_errno;
 }
 
@@ -256,7 +256,8 @@ void Utils::show_error(int connfd, const char *info)
     close(connfd);
 }
 
-int *Utils::u_pipefd = 0;
+// 静态变量的类外初始化
+int *Utils::u_pipefd = 0;  // 指针指向
 int Utils::u_epollfd = 0;
 
 

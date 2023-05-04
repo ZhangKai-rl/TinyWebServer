@@ -3,16 +3,16 @@
 //服务器主程序，调用WebServer类实现Web服务器
 int main(int argc, char *argv[])
 {
-    //需要修改的数据库信息,登录名,密码,库名
+    //需要修改的mysql数据库信息,登录名,密码,库名
     string user = "root";
-    string passwd = "123";
-    string databasename = "webserDb";
+    string passwd = "1";
+    string databasename = "tinywebserver";
 
     //命令行解析
-    Config config;
+    Config config;  // 解析命令行参数放到这个类变量中用于之后初始化server
     config.parse_arg(argc, argv);
 
-    WebServer server;
+    WebServer server; // 调用了默认构造函数WebServer::WebServer()
 
     //初始化
     server.init(config.PORT, user, passwd, databasename, config.LOGWrite, 

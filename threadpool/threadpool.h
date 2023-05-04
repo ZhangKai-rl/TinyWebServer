@@ -20,22 +20,22 @@ public:
 
 private:
     /*工作线程运行的函数，它不断从工作队列中取出任务并执行之*/
-    static void *worker(void *arg);//为什么要用静态成员函数呢-----class specific
+    static void *worker(void *arg);//为什么要用静态成员函数呢-----class specific    在52行有讲解
     void run();
 
 private:
     int m_thread_number;        //线程池中的线程数
-    int m_max_requests;         //请求队列中允许的最大请求数
-    pthread_t *m_threads;       //描述线程池的数组，其大小为m_thread_number
-    std::list<T *> m_workqueue; //请求队列
+    int m_max_requests;         //请求队列中允许的最大请求数  任务最大数量
+    pthread_t *m_threads;       //描述线程池的数组，其大小为m_thread_number  线程池   传出参数
+    std::list<T *> m_workqueue; //请求队列           表示具体的任务双链表
     locker m_queuelocker;       //保护请求队列的互斥锁
-    sem m_queuestat;            //是否有任务需要处理
+    sem m_queuestat;            //是否有任务需要处理  表示当前任务的数量 任务信号量
     connection_pool *m_connPool;  //数据库
     int m_actor_model;          //模型切换（这个切换是指Reactor/Proactor）
 };
 
 template <typename T>
-//线程池构造函数
+//线程池构造函数 做的事情：创建线程放到m_threads中并设置线程分离
 threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int thread_number, int max_requests) : m_actor_model(actor_model),m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL),m_connPool(connPool)
 {
     if (thread_number <= 0 || max_requests <= 0)
@@ -45,7 +45,7 @@ threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int threa
         throw std::exception();
     for (int i = 0; i < thread_number; ++i)
     {
-        //函数原型中的第三个参数，为函数指针，指向处理线程函数的地址。
+        //函数原型中的第三个参数worker，为函数指针，指向处理线程函数的地址。
         //若线程函数为类成员函数，
         //则this指针会作为默认的参数被传进函数中，从而和线程函数参数(void*)不能匹配，不能通过编译。
         //静态成员函数就没有这个问题，因为里面没有this指针。
@@ -55,7 +55,7 @@ threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int threa
             throw std::exception();
         }
         //主要是将线程属性更改为unjoinable，使得主线程分离,便于资源的释放，详见PS
-        if (pthread_detach(m_threads[i]))
+        if (pthread_detach(m_threads[i])) // 将线程设置为unjoinable状态，设置线程分离，线程退出时系统自动回收资源，无需再主线程中使用pthread_join();
         {
             delete[] m_threads;
             throw std::exception();
@@ -69,7 +69,7 @@ threadpool<T>::~threadpool()
 }
 
 template <typename T>
-//reactor模式下的请求入队
+//reactor模式下的请求入队   加入工作队列
 bool threadpool<T>::append(T *request, int state)
 {
     m_queuelocker.lock();
@@ -78,8 +78,8 @@ bool threadpool<T>::append(T *request, int state)
         m_queuelocker.unlock();
         return false;
     }
-    //读写事件
-    request->m_state = state;
+    //读写事件   
+    request->m_state = state; // 只有这一行和proactor模式入队不同，原因？
     m_workqueue.push_back(request);
     m_queuelocker.unlock();
     m_queuestat.post();
@@ -102,11 +102,11 @@ bool threadpool<T>::append_p(T *request)
     return true;
 }
 
-//工作线程:pthread_create时就调用了它
+//工作线程:pthread_create时就调用了它  线程创建后的回调函数：执行run函数    // 返回值是void*
 template <typename T>
 void *threadpool<T>::worker(void *arg)
 {
-    //调用时 *arg是this！
+    //调用时 *arg是this！  在pthread_creat中传进来参数this
     //所以该操作其实是获取threadpool对象地址
     threadpool *pool = (threadpool *)arg;
     //线程池中每一个线程创建时都会调用run()，睡眠在队列中
@@ -114,32 +114,33 @@ void *threadpool<T>::worker(void *arg)
     return pool;
 }
 
-//线程池中的所有线程都睡眠，等待请求队列中新增任务
+//线程池中的所有线程都睡眠，等待请求队列中新增任务   所有线程都在一直执行run函数。
+//run函数工作：（进行读写操作），业务逻辑处理调用http_conn::process()
 template <typename T>
 void threadpool<T>::run()
 {
     while (true)
     {
-        m_queuestat.wait();
-        m_queuelocker.lock();
+        m_queuestat.wait();     // 信号量，任务 -1 ，小于0阻塞而等待新任务。当有新任务时进行post+1，所有线程竞争此任务。
+        m_queuelocker.lock();   // 取任务队列时上锁
         if (m_workqueue.empty())
         {
             m_queuelocker.unlock();
             continue;
         }
-        //
+        // 任务队列不为空，选择最前面的任务来执行
         T *request = m_workqueue.front();
         m_workqueue.pop_front();
         m_queuelocker.unlock();
         if (!request)
             continue;
-        //Reactor
+        //Reactor  子线程需要自己进行读写操作
         if (1 == m_actor_model)
         {
             //IO事件类型：0为读
             if (0 == request->m_state)
             {
-                if (request->read_once())
+                if (request->read_once()) // 进行读取数据
                 {
                     request->improv = 1;
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
@@ -151,7 +152,7 @@ void threadpool<T>::run()
                     request->timer_flag = 1;
                 }
             }
-            else
+            else // 1 == request->m_state  这是个写事件
             {
                 if (request->write())
                 {
@@ -166,6 +167,7 @@ void threadpool<T>::run()
         }
         //default:Proactor，线程池不需要进行数据读取，而是直接开始业务处理
         //之前的操作已经将数据读取到http的read和write的buffer中了
+        // 写操作不归子线程管
         else
         {
             connectionRAII mysqlcon(&request->mysql, m_connPool);

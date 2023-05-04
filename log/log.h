@@ -10,13 +10,13 @@
 
 using namespace std;
 
-class Log
+class Log // 单例，局部懒汉
 {
 public:
-    //C++11以后,使用局部变量懒汉不用加锁
+    //C++11以后,使用局部变量懒汉不用加锁   使用类的私有静态指针变量指向类的唯一实例，并用一个公有的静态方法获取该实例。
     static Log *get_instance()
     {
-        static Log instance;
+        static Log instance; // 局部懒汉：实例的初始化放在getinstance函数内部
         return &instance;
     }
 
@@ -53,11 +53,11 @@ private:
     int m_log_buf_size; //日志缓冲区大小
     long long m_count;  //日志行数记录
     int m_today;        //因为按天分类,记录当前时间是那一天
-    FILE *m_fp;         //打开log的文件指针
+    FILE *m_fp;         //打开log的文件指针   写日志的文件指针
     char *m_buf;
     block_queue<string> *m_log_queue; //阻塞队列
-    bool m_is_async;                  //是否同步标志位
-    locker m_mutex;
+    bool m_is_async;                  //是否同步标志位   异步 == 1
+    locker m_mutex;   // 异步写的互斥锁
     int m_close_log; //关闭日志
 };
 

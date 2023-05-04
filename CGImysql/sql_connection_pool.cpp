@@ -18,7 +18,7 @@ connection_pool::connection_pool()
 
 connection_pool *connection_pool::GetInstance()
 {
-	static connection_pool connPool;
+	static connection_pool connPool; // 懒汉
 	return &connPool;
 }
 
@@ -31,17 +31,17 @@ void connection_pool::init(string url, string User, string PassWord, string DBNa
 	m_PassWord = PassWord;
 	m_DatabaseName = DBName;
 	m_close_log = close_log;
-
+	// 创建sql连接池中的连接
 	for (int i = 0; i < MaxConn; i++)
 	{
 		MYSQL *con = NULL;
-		con = mysql_init(con);
+		con = mysql_init(con);  //使用mysql_init()初始化连接
 
 		if (con == NULL)
 		{
 			LOG_ERROR("MySQL Error");
 			exit(1);
-		}
+		}  // 使用mysql_real_connect()建立一个到mysql数据库的连接    c_str: string->char *
 		con = mysql_real_connect(con, url.c_str(), User.c_str(), PassWord.c_str(), DBName.c_str(), Port, NULL, 0);
 
 		if (con == NULL)

@@ -102,7 +102,7 @@ void Log::write_log(int level, const char *format, ...)
     {
         
         char new_log[256] = {0};
-        fflush(m_fp);
+        fflush(m_fp);  // 立即将缓冲区中的内容写入m_fp指向的文件；还是不太懂这里
         fclose(m_fp);
         char tail[16] = {0};
        
@@ -122,7 +122,7 @@ void Log::write_log(int level, const char *format, ...)
     }
  
     m_mutex.unlock();
-
+    // 可变参数的处理
     va_list valst;
     va_start(valst, format);
 
@@ -141,11 +141,12 @@ void Log::write_log(int level, const char *format, ...)
 
     m_mutex.unlock();
 
+    // 异步写log, 先缓存到队列中（内存），之后使用专门的线程写。
     if (m_is_async && !m_log_queue->full())
     {
         m_log_queue->push(log_str);
     }
-    else
+    else  // 同步直接写入
     {
         m_mutex.lock();
         fputs(log_str.c_str(), m_fp);

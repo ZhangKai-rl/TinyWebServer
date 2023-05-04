@@ -28,12 +28,12 @@
 //需要前向声明
 class util_timer;
 
-//连接资源
+//连接资源  webserver::*user_timer的类型
 struct client_data
 {
     sockaddr_in address;
     int sockfd;
-    util_timer *timer;
+    util_timer *timer; // 此时util_timer类还没具体实现，可以是指针
 };
 
 //定时器类:以一个双向链表实现
@@ -55,7 +55,7 @@ public:
     util_timer *next;
 };
 
-//定时器容器类
+//定时器容器类 里面包含一个个事件连接的定时器util_timer。升序用户定时器双向链表
 class sort_timer_lst
 {
 public:
@@ -107,7 +107,7 @@ public:
     void show_error(int connfd, const char *info);
 
 public:
-    static int *u_pipefd;//管道id
+    static int *u_pipefd;//管道id   指针变量指向m_pipefd
     sort_timer_lst m_timer_lst;//升序链表定时器
     static int u_epollfd;//epollfd
     int m_TIMESLOT;//最小时间间隙
