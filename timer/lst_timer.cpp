@@ -119,6 +119,8 @@ void sort_timer_lst::del_timer(util_timer *timer)
 }
 
 //定时任务处理函数  SIGALRM每次出发就执行一次tick函数
+// 调用位置：
+// 完成工作：
 void sort_timer_lst::tick()
 {
     if (!head)

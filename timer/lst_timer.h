@@ -46,6 +46,7 @@ public:
     //超时时间
     time_t expire;
     //回调函数:从内核事件表删除事件，关闭文件描述符，释放连接资源
+    // 当定时器到期超时时执行此回调函数
     void (* cb_func)(client_data *);
     //连接资源
     client_data *user_data;

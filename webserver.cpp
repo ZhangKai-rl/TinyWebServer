@@ -112,6 +112,7 @@ void WebServer::thread_pool()
 }
 
 //创建网络编程：Socket网络编程基础步骤
+// 在这里发送定时信号
 void WebServer::eventListen()
 {
     //SOCK_STREAM 表示使用面向字节流的TCP协议
@@ -209,7 +210,7 @@ void WebServer::adjust_timer(util_timer *timer)
     LOG_INFO("%s", "adjust timer once");
 }
 
-//删除定时器节点，关闭连接
+//发生了异常或者定时事件，     删除用户定时器节点，关闭连接
 void WebServer::deal_timer(util_timer *timer, int sockfd)
 {
     timer->cb_func(&users_timer[sockfd]);
@@ -279,6 +280,7 @@ bool WebServer::dealwithsignal(bool &timeout, bool &stop_server)
     char signals[1024];
     //从管道读端读出信号值，成功返回字节数，失败返回-1
     //正常情况下，这里的ret返回值总是1，只有14和15两个ASCII码对应的字符
+    // 从pair管道0端读出信号具体值
     ret = recv(m_pipefd[0], signals, sizeof(signals), 0);
     if (ret == -1)
     {
@@ -373,6 +375,7 @@ void WebServer::dealwithread(int sockfd)
 }
 
 //写操作 epollout
+// 工作：调整对应定时器
 void WebServer::dealwithwrite(int sockfd)
 {
     util_timer *timer = users_timer[sockfd].timer;
