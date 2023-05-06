@@ -55,7 +55,8 @@ public:
 class connectionRAII{   // 使用局部对象来管理资源，实现自动初始化和销毁。我的理解这是一个sql连接
 
 public:
-	connectionRAII(MYSQL **con, connection_pool *connPool);  // 构造，获取一个连接  // **咋个意思
+	// 构造，获取一个连接，并将外部sql连接指向该连接。 con类似传出参数
+	connectionRAII(MYSQL **con, connection_pool *connPool);
 	~connectionRAII();	// 析构，释放一个连接
 	
 private:

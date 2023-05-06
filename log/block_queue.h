@@ -1,6 +1,7 @@
 /*************************************************************
 *循环数组实现的阻塞队列，m_back = (m_back + 1) % m_max_size;  
 *线程安全，每个操作前都要先加互斥锁，操作完后，再解锁
+// 只有异步写日志才会用到阻塞队列类
 **************************************************************/
 
 #ifndef BLOCK_QUEUE_H
@@ -19,6 +20,7 @@ class block_queue  // 根据这个队列来判断同步还是异步写
 public:
     block_queue(int max_size = 1000)
     {
+        // 判断是否合法
         if (max_size <= 0)
         {
             exit(-1);
@@ -31,6 +33,7 @@ public:
         m_back = -1;
     }
 
+    // 重置此队列
     void clear()
     {
         m_mutex.lock();
@@ -202,11 +205,11 @@ private:
     locker m_mutex;
     cond m_cond;
 
-    T *m_array;
-    int m_size;
-    int m_max_size;
-    int m_front;
-    int m_back;
+    T *m_array;  // 具体实现，使用动态数组实现
+    int m_size;  // 阻塞队列当前size
+    int m_max_size;  // 阻塞队列最大size
+    int m_front;  // 阻塞队列队头
+    int m_back;  // 则色队列队尾
 };
 
 #endif

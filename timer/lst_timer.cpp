@@ -119,8 +119,8 @@ void sort_timer_lst::del_timer(util_timer *timer)
 }
 
 //定时任务处理函数  SIGALRM每次出发就执行一次tick函数
-// 调用位置：
-// 完成工作：
+// 调用位置：utils.timer_handler();
+// 完成工作：遍历定时器容器并进行调整
 void sort_timer_lst::tick()
 {
     if (!head)
@@ -245,6 +245,8 @@ void Utils::addsig(int sig, void(handler)(int), bool restart)
 }
 
 //定时处理任务，重新定时以不断触发SIGALRM信号
+// 工作：1. tick 2. 重新alarm
+// 调用：收到SIGALRM信号，将timeout置为true后调用
 void Utils::timer_handler()
 {
     m_timer_lst.tick();
@@ -265,12 +267,16 @@ int Utils::u_epollfd = 0;
 
 class Utils;
 //定时器回调函数:从内核事件表删除事件，关闭文件描述符，释放连接资源
+// 作用：用户定时器过期，完成各种超时处理工作
+// 工作：删除epollfd注册，关闭connfd，减少static http用户计数
+// 调用：tick函数中调用
 void cb_func(client_data *user_data)
 {
     //删除非活动连接在socket上的注册事件
     epoll_ctl(Utils::u_epollfd, EPOLL_CTL_DEL, user_data->sockfd, 0);
     assert(user_data);
     //删除非活动连接在socket上的注册事件
+    // 关闭connfd
     close(user_data->sockfd);
     //减少连接数
     http_conn::m_user_count--;

@@ -23,6 +23,7 @@ connection_pool *connection_pool::GetInstance()
 }
 
 //构造初始化
+// 工作：初始化成员变量；创建多个sql连接放入连接池中。
 void connection_pool::init(string url, string User, string PassWord, string DBName, int Port, int MaxConn, int close_log)
 {
 	m_url = url;
@@ -100,6 +101,8 @@ bool connection_pool::ReleaseConnection(MYSQL *con)
 }
 
 //销毁数据库连接池
+// 工作：遍历connList关闭所有sql连接；初始化成员变量的值
+// 调用: 析构函数中调用
 void connection_pool::DestroyPool()
 {
 
@@ -130,6 +133,10 @@ connection_pool::~connection_pool()
 {
 	DestroyPool();
 }
+
+
+// connectionRAII类实现。
+
 
 connectionRAII::connectionRAII(MYSQL **SQL, connection_pool *connPool){
 	*SQL = connPool->GetConnection();
